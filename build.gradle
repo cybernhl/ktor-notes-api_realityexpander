@@ -5,9 +5,20 @@ import java.text.SimpleDateFormat
 import groovy.transform.Field  // allow use of global strings
 
 buildscript {
+    ext {
+        kotlin = "1.9.25"
+        println "Show  kotlin_version  : ${kotlin}"
+    }
     repositories {
+        gradlePluginPortal()
         mavenCentral()
-        //jcenter()
+        google()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+        maven {
+            url = uri('https://maven.pkg.jetbrains.space/public/p/compose/dev')
+        }
     }
     
     dependencies {
@@ -58,14 +69,6 @@ sourceSets {
     test.resources.srcDirs = ['testresources']
 }
 
-repositories {
-    mavenCentral()
-    mavenLocal()
-    maven { url 'https://kotlin.bintray.com/ktor' }
-    maven { url 'https://kotlin.bintray.com/kotlin-js-wrappers' }
-    jcenter()
-
-}
 
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
