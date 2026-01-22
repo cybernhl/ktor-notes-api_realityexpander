@@ -67,6 +67,11 @@ repositories {
 
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
 // Compiling for JVM 1.8
 tasks.withType(KotlinCompile).configureEach {
     kotlinOptions {
