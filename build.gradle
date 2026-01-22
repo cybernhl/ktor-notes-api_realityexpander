@@ -6,8 +6,10 @@ import groovy.transform.Field  // allow use of global strings
 
 buildscript {
     ext {
-        kotlin = "1.9.25"
-        println "Show  kotlin_version  : ${kotlin}"
+        kotlin_version = libs.versions.kotlin.get()
+        coroutines_version = libs.versions.kotlinx.coroutines.get()
+        logback_version = libs.versions.logback.get()
+        println "Show  kotlin_version  : ${kotlin_version}"
     }
     repositories {
         gradlePluginPortal()
@@ -26,7 +28,11 @@ buildscript {
     }
 }
 
-apply plugin: 'kotlin'
+
+plugins {
+    alias(libs.plugins.kotlin.jvm)
+}
+
 apply plugin: 'application'
 
 group 'com.realityexpander'
@@ -115,7 +121,7 @@ dependencies {
     implementation "org.litote.kmongo:kmongo-coroutine:$kmongo_version"
 
     // Coroutines
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_core_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
 
     // Encryption / Security
     implementation 'commons-codec:commons-codec:1.14'
