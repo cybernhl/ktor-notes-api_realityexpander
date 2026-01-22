@@ -62,23 +62,24 @@ jar {
     archivesBaseName = "app"
 }
 
-sourceSets {
-    main.kotlin.srcDirs = main.java.srcDirs = ['src']
-    test.kotlin.srcDirs = test.java.srcDirs = ['test']
-    main.resources.srcDirs = ['resources']
-    test.resources.srcDirs = ['testresources']
-}
-
-
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
-// Compiling for JVM 1.8
-tasks.withType(KotlinCompile).configureEach {
-    kotlinOptions {
-        jvmTarget = "1.8"
+kotlin {
+    sourceSets {
+        main {
+            kotlin.srcDirs("src")
+            resources.srcDirs("resources")
+        }
+        test {
+            kotlin.srcDirs("test")
+            resources.srcDirs("testresources")
+        }
+    }
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8
     }
 }
 
@@ -238,11 +239,8 @@ static void writeFile(String path, String content) {
     writer.close()
 }
 
-
-
 def createStartAppScript() {
     println("•--> Create the startApp script for app version: " + version)
-
     // CANT CREATE FILES USING ECHO COMMAND FROM GRADLE - left for reference
     // Its because the output stream is directed to the console, not the file.
     // def cmd = "echo "hello" > ./root/home/test.txt" // won't create the test.txt file!!!
