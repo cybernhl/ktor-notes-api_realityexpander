@@ -31,9 +31,10 @@ fun Route.notesRoute() {
             get {
                 // get the email from the authenticated user object
                 val email = call.principal<UserIdPrincipal>()!!.name
-                val notes = getNotesForUserByEmail(email)
+                val notes = NotesDatabase.getNotesForUserByEmail(email)
 
-                call.respond(OK,
+                call.respond(
+                    OK,
                     SimpleResponseWithData<List<Note>>(
                         isSuccessful = true, statusCode = OK,
                         message = "${notes.size} note${addPostfixS(notes)} found",
@@ -64,9 +65,9 @@ fun Route.notesRoute() {
                 }
 
                 val email = call.principal<UserIdPrincipal>()!!.name
-                val userExists = ifUserEmailExists(email)
+                val userExists = NotesDatabase.ifUserEmailExists(email)
                 if (userExists) {
-                    val acknowledged = saveNote(note)
+                    val acknowledged = NotesDatabase.saveNote(note)
 
                     if (acknowledged) {
                         call.respond(
@@ -128,16 +129,16 @@ fun Route.notesRoute() {
                     return@post
                 }
 
-                val userExists = ifUserEmailExists(email)
+                val userExists = NotesDatabase.ifUserEmailExists(email)
                 if (userExists) {
-                    val userId = getUserByEmail(email)!!.id
+                    val userId = NotesDatabase.getUserByEmail(email)!!.id
 
                     // Only delete the note for this userId
-                    val acknowledged = deleteNoteForUser(userId, request.id)
+                    val acknowledged = NotesDatabase.deleteNoteForUser(userId, request.id)
 
                     if (acknowledged) {
                         // Check if note still exists (ie: only an owner was removed)
-                        val note = getNote(request.id)
+                        val note = NotesDatabase.getNote(request.id)
 
                         if (note != null) {
                             call.respond(
@@ -215,18 +216,18 @@ fun Route.notesRoute() {
                 // Show incoming request headers
                 //println("headers: ${call.request.headers.entries()}")
 
-                if (ifUserIdExists(request.ownerIdToAdd)) {
+                if (NotesDatabase.ifUserIdExists(request.ownerIdToAdd)) {
 
                     // Already an owner of this note?
-                    if(isOwnerOfNote(request.ownerIdToAdd, request.noteId)) {
-                        val note = getNote(request.noteId)!!
+                    if (NotesDatabase.isOwnerOfNote(request.ownerIdToAdd, request.noteId)) {
+                        val note = NotesDatabase.getNote(request.noteId)!!
 
                         call.respond(
                             OK,
                             SimpleResponseWithData<Note?>(
                                 isSuccessful = false,
                                 statusCode = OK,
-                                message = "${getEmailForUserId(request.ownerIdToAdd)} is already an owner of this note",
+                                message = "${NotesDatabase.getEmailForUserId(request.ownerIdToAdd)} is already an owner of this note",
                                 data = note
                             )
                         )
@@ -234,10 +235,11 @@ fun Route.notesRoute() {
                         return@post
                     }
 
-                    val acknowledged = addOwnerToNote(request.ownerIdToAdd, request.noteId)
+                    val acknowledged =
+                        NotesDatabase.addOwnerToNote(request.ownerIdToAdd, request.noteId)
 
                     if (acknowledged) {
-                        val note = getNote(request.noteId)
+                        val note = NotesDatabase.getNote(request.noteId)
 
                         if (note != null) {
                             call.respond(
@@ -246,7 +248,7 @@ fun Route.notesRoute() {
                                     isSuccessful = true,
                                     statusCode = OK,
                                     message = "Owner added to note, " +
-                                            "${getEmailForUserId(request.ownerIdToAdd)} can now access this note",
+                                            "${NotesDatabase.getEmailForUserId(request.ownerIdToAdd)} can now access this note",
                                     data = note
                                 )
                             )
@@ -296,7 +298,7 @@ fun Route.notesRoute() {
 
     get("/getOwnerIdForEmail") {
         val email = call.parameters["email"]!!
-        val user = getUserByEmail(email)
+        val user = NotesDatabase.getUserByEmail(email)
         if (user != null) {
             call.respond(
                 OK,
@@ -321,7 +323,7 @@ fun Route.notesRoute() {
 
     get("/getEmailForOwnerId") {
         val ownerId = call.parameters["ownerId"]!!
-        val email = getEmailForUserId(ownerId)
+        val email = NotesDatabase.getEmailForUserId(ownerId)
         if (email != null) {
             call.respond(
                 OK,
@@ -385,53 +387,53 @@ fun Route.notesRoute() {
 
     route("/getAllNotesDsl") {
         //authenticate {
-            get {
+        get {
 
-                val email = if (call.request.queryParameters["email"] != null) {
-                     call.parameters["email"]!!
-                } else {
-                    ""
+            val email = if (call.request.queryParameters["email"] != null) {
+                call.parameters["email"]!!
+            } else {
+                ""
+            }
+            val allNotes = NotesDatabase.getNotesForUserByEmail(email)
+
+            call.respondHtml {
+                head {
+                    styleLink("/static/css/styles.css")  // from StyleRoute.kt
                 }
-                val allNotes = getNotesForUserByEmail(email)
-
-                call.respondHtml {
-                    head {
-                        styleLink("/static/css/styles.css")  // from StyleRoute.kt
+                body {
+                    h1 {
+                        +"All Notes"
                     }
-                    body {
-                        h1 {
-                            +"All Notes"
-                        }
-                        if(email.isBlank()) {
-                            +"No email provided"
-                        } else {
-                            +"Email: $email"
-                        }
-                        for(note in allNotes) {
-                            h3 {
-                                +"${note.title} (Belongs to: ${
-                                    note.owners.map { ownerId ->
-                                        runBlocking {
-                                            getEmailForUserId(ownerId)
-                                        }
-                                    }.joinToString(", ")
-                                })"
+                    if (email.isBlank()) {
+                        +"No email provided"
+                    } else {
+                        +"Email: $email"
+                    }
+                    for (note in allNotes) {
+                        h3 {
+                            +"${note.title} (Belongs to: ${
+                                note.owners.map { ownerId ->
+                                    runBlocking {
+                                        NotesDatabase.getEmailForUserId(ownerId)
+                                    }
+                                }.joinToString(", ")
+                            })"
 
-                            }
-                            p {
-                                +note.content
-                            }
-                            br
                         }
-                        div {
-                            h2 {
+                        p {
+                            +note.content
+                        }
+                        br
+                    }
+                    div {
+                        h2 {
 
-                                +"Showing rule(\"div h2\") here"
-                            }
+                            +"Showing rule(\"div h2\") here"
                         }
                     }
                 }
             }
+        }
         //}
     }
 
@@ -441,9 +443,9 @@ private suspend fun ApplicationCall.getNotesRequest(
     request: NotesRequest,
     isFromWeb: Boolean
 ) {
-    val userExists = ifUserEmailExists(request.email)
+    val userExists = NotesDatabase.ifUserEmailExists(request.email)
     if (userExists) {
-        val notes = getNotesForUserByEmail(request.email)
+        val notes = NotesDatabase.getNotesForUserByEmail(request.email)
 
         if (notes.isNotEmpty()) {
             respondPlatform(
@@ -491,6 +493,7 @@ private suspend fun ApplicationCall.respondPlatform(
             //call.respondRedirect("/")
 //            respond(response.statusCode, response)
         }
+
         false -> {
             respond(response.statusCode, response)
         }
@@ -539,14 +542,14 @@ private suspend fun ApplicationCall.respondRawHTML(
                             </div>
                             <br>
                             ${
-                                // If it's a success, there will be data attached.
-                                if (response is SimpleResponseWithData<*>) {
-                                    runBlocking {
-                                        @Suppress("UNCHECKED_CAST")
-                                        renderNotesListHTML(response as SimpleResponseWithData<List<Note>>)
-                                    }
-                                } else "No Data"
-                            }
+                    // If it's a success, there will be data attached.
+                    if (response is SimpleResponseWithData<*>) {
+                        runBlocking {
+                            @Suppress("UNCHECKED_CAST")
+                            renderNotesListHTML(response as SimpleResponseWithData<List<Note>>)
+                        }
+                    } else "No Data"
+                }
                         </h2>
                         <br>
                       </body>
@@ -576,8 +579,8 @@ private suspend fun ApplicationCall.renderNotesListHTML(response: SimpleResponse
     ${
         try {
             @Suppress("UNCHECKED_CAST") // we're pretty sure it's a `List<Note>`
-            response.data.let { notes -> 
-            """
+            response.data.let { notes ->
+                """
             <p>${notes.size} note${addPostfixS(notes)} found for user: ${request.queryParameters["email"]}</p>
             
             <style>
@@ -597,9 +600,9 @@ private suspend fun ApplicationCall.renderNotesListHTML(response: SimpleResponse
             </style>
             <ul style="counter-reset: items;">
             ${
-                // List each note as a list item
-                notes.map { note ->
-            """
+                    // List each note as a list item
+                    notes.map { note ->
+                        """
                 <li style="background-color: ${prependHashIfNotPresent(note.color)};
                            color: ${prependHashIfNotPresent(invertColor(note.color, true))};
                            list-style: none;
@@ -613,18 +616,20 @@ private suspend fun ApplicationCall.renderNotesListHTML(response: SimpleResponse
                     <span class="italic">date: </span>${note.date}
                     <br>
                     <span class="italic">owner: </span>
-                    <code>${note.owners.map {id -> 
-                        getEmailForUserId(id) ?: "User not found"
-                    }.joinToString(", ")}
+                    <code>${
+                            note.owners.map { id ->
+                                NotesDatabase.getEmailForUserId(id) ?: "User not found"
+                            }.joinToString(", ")
+                        }
                     </code>
                     <br>
                 </li>
             """
-                }.joinToString("")  // removes the []'s from the markup
-            }
+                    }.joinToString("")  // removes the []'s from the markup
+                }
             </ul>
             """.trimIndent()
-            } 
+            }
         } catch (e: Exception) {  // just in case the cast fails
             e.printStackTrace()
             "<br><p style=\"color:red; background-color:black;\">" +
@@ -635,7 +640,6 @@ private suspend fun ApplicationCall.renderNotesListHTML(response: SimpleResponse
     """.trimIndent()
 
 
-
 //// UTILS /////
 
 // Add s to the end of the string if it's greater than 1
@@ -643,10 +647,10 @@ private fun addPostfixS(it: List<Note>) =
     if (it.size > 1) "s" else ""
 
 private fun prependHashIfNotPresent(it: String) =
-    if(it.startsWith("#")) it else "#$it"
+    if (it.startsWith("#")) it else "#$it"
 
 private fun removeHashIfPresent(it: String) =
-    if(it.startsWith("#")) it.substring(1) else it
+    if (it.startsWith("#")) it.substring(1) else it
 
 // Accepts a hex color string (with or without "#" prefix) and returns
 //   a "#"-prefixed hex color string representing the inverted color.
@@ -657,10 +661,10 @@ private fun invertColor(colorHexStr: String, forceLightOrDark: Boolean): String 
     val r = Integer.parseInt(colorHex.substring(0, 2), 16)
     val g = Integer.parseInt(colorHex.substring(2, 4), 16)
     val b = Integer.parseInt(colorHex.substring(4, 6), 16)
-    val a = if(colorHex.length>6) Integer.parseInt(colorHex.substring(6, 8), 16) else 255
+    val a = if (colorHex.length > 6) Integer.parseInt(colorHex.substring(6, 8), 16) else 255
 
     return if (forceLightOrDark) {
-        if (((r + g + b)/3.0) < 128 || a < 128 ) "#DDDDDD" else "#222222"
+        if (((r + g + b) / 3.0) < 128 || a < 128) "#DDDDDD" else "#222222"
     } else {
         "#${String.format("%02x%02x%02x", 255 - r, 255 - g, 255 - b)}FF"  // Forces alpha to be 255
         // return "#${String.format("%02X", r)}${String.format("%02X", g)}${String.format("%02X", b)}"

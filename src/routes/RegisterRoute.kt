@@ -1,8 +1,7 @@
 package com.realityexpander.routes
 
-import com.realityexpander.data.ifUserEmailExists
+import com.realityexpander.data.NotesDatabase
 import com.realityexpander.data.collections.User
-import com.realityexpander.data.registerUser
 import com.realityexpander.data.requests.AccountRequest
 import com.realityexpander.data.responses.SimpleResponse
 import com.realityexpander.security.getHashWithSaltForPassword
@@ -44,7 +43,7 @@ fun Route.registerRoute() {
                 return@post
             }
 
-            val userExists = ifUserEmailExists(request.email)
+            val userExists =  NotesDatabase.ifUserEmailExists(request.email)
             if (!userExists) {
 
                 if (request.email.isBlank() || request.password.isBlank()) {
@@ -55,7 +54,7 @@ fun Route.registerRoute() {
                     return@post
                 }
 
-                if (registerUser(
+                if ( NotesDatabase.registerUser(
                         User(email = request.email, password = getHashWithSaltForPassword(request.password))
                     )
                 ) {

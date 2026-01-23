@@ -1,7 +1,6 @@
 package com.realityexpander.routes
 
-import com.realityexpander.data.ifUserEmailExists
-import com.realityexpander.data.checkPasswordForEmail
+import com.realityexpander.data.NotesDatabase
 import com.realityexpander.data.requests.AccountRequest
 import com.realityexpander.data.responses.SimpleResponse
 import io.ktor.application.*
@@ -50,9 +49,9 @@ fun Route.loginRoute() {
             return@post
         }
 
-        val userExists = ifUserEmailExists(request.email)
+        val userExists =  NotesDatabase.ifUserEmailExists(request.email)
         if (userExists) {
-            if (checkPasswordForEmail(request.email, request.password)) {
+            if ( NotesDatabase.checkPasswordForEmail(request.email, request.password)) {
                 call.respondPlatform(
                     isFromWeb,
                     SimpleResponse(
@@ -103,7 +102,6 @@ private suspend fun ApplicationCall.respondPlatform(
         }
     }
 }
-
 
 private suspend fun respondLoginRawHTML(call: ApplicationCall) {
     call.respondHtml {
