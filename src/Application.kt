@@ -325,8 +325,9 @@ package com.realityexpander
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.LoggerContext
-import com.realityexpander.data.checkPasswordForEmail
-import com.realityexpander.data.printMongoEnv
+import com.realityexpander.data.DataSourceFactory
+import com.realityexpander.data.DataSourceFeature
+import com.realityexpander.data.NotesDataSource
 import com.realityexpander.routes.loginRoute
 import com.realityexpander.routes.notesRoute
 import com.realityexpander.routes.registerRoute
@@ -338,10 +339,6 @@ import io.ktor.gson.*
 import io.ktor.http.*
 import io.ktor.response.*
 import io.ktor.routing.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.css.CssBuilder
 import org.slf4j.LoggerFactory
 import kotlin.time.ExperimentalTime
@@ -352,6 +349,19 @@ fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 @Suppress("unused") // Referenced in application.conf
 @kotlin.jvm.JvmOverloads
 fun Application.module(testing: Boolean = false) {
+    val dataSourceTypeStr = environment.config.propertyOrNull("ktor.deployment.dataSource")?.getString()
+    val dataSourceType = try {
+        DataSourceFactory.DataSourceType.valueOf(dataSourceTypeStr ?: "MONGO")
+    } catch (e: IllegalArgumentException) {
+        log.warn("Invalid DATA_SOURCE value '$dataSourceTypeStr'. Defaulting to MONGO.")
+        DataSourceFactory.DataSourceType.MONGO
+    }
+    log.info("Using data source: $dataSourceType")
+
+    // 使用 Factory 建立實例並安裝為 Ktor Feature
+    install(DataSourceFeature) {
+        dataSource = DataSourceFactory.create(dataSourceType)
+    }
 
     install(DefaultHeaders)      // Add default headers (ie: Date of the request)
     install(CallLogging)         // log call details
@@ -363,7 +373,20 @@ fun Application.module(testing: Boolean = false) {
 
     // Must set up authentication before setting up the Routes (or will crash)
     install(Authentication) {
-        configureAuth()
+        basic {
+            realm = "Notes Server"
+            validate { credentials ->
+                //highlight-start
+                // 從 Feature 獲取 dataSource
+                val dataSource = feature(DataSourceFeature).dataSource
+                //highlight-end
+                val email = credentials.name
+                val password = credentials.password
+                if (dataSource.checkPasswordForEmail(email, password)) {
+                    UserIdPrincipal(email)
+                } else null
+            }
+        }
     }
 
     install(Routing) {           // Our routes are defined in `/routes`
@@ -392,11 +415,6 @@ fun Application.module(testing: Boolean = false) {
 //    CoroutineScope(Dispatchers.IO).launch {
 //        println("Email Exists = ${checkIfUserExists("test@123.com")}")
 //    }
-
-
-    // Print mongo environment variables - For debugging only
-     printMongoEnv()
-
 }
 
 var i = 0
@@ -409,21 +427,5 @@ suspend inline fun ApplicationCall.respondCss(builder: CssBuilder.() -> Unit) {
     respondText(CssBuilder().apply(builder).toString(), ContentType.Text.CSS)
 }
 
-
-// Setup "basic" authentication using email and password
-private fun Authentication.Configuration.configureAuth() {
-    basic {
-        realm = "Note Server"
-        validate { credentials ->
-            val email = credentials.name
-            val password = credentials.password
-
-            // Check in database if user exists & password is correct
-            if (checkPasswordForEmail(email, password)) {
-                UserIdPrincipal(email)
-            } else {
-                null
-            }
-        }
-    }
-}
+val ApplicationCall.dataSource: NotesDataSource
+    get() = application.feature(DataSourceFeature).dataSource

@@ -4,6 +4,7 @@ import com.realityexpander.data.MongoNotesDataSource
 import com.realityexpander.data.collections.User
 import com.realityexpander.data.requests.AccountRequest
 import com.realityexpander.data.responses.SimpleResponse
+import com.realityexpander.dataSource
 import com.realityexpander.security.getHashWithSaltForPassword
 import io.ktor.application.*
 import io.ktor.http.HttpStatusCode.Companion.BadRequest
@@ -43,7 +44,7 @@ fun Route.registerRoute() {
                 return@post
             }
 
-            val userExists =  MongoNotesDataSource.ifUserEmailExists(request.email)
+            val userExists = call.dataSource.ifUserEmailExists(request.email)
             if (!userExists) {
 
                 if (request.email.isBlank() || request.password.isBlank()) {
@@ -54,7 +55,7 @@ fun Route.registerRoute() {
                     return@post
                 }
 
-                if ( MongoNotesDataSource.registerUser(
+                if ( call.dataSource.registerUser(
                         User(email = request.email, password = getHashWithSaltForPassword(request.password))
                     )
                 ) {

@@ -22,7 +22,7 @@ buildscript {
             url = uri('https://maven.pkg.jetbrains.space/public/p/compose/dev')
         }
     }
-    
+
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
@@ -31,6 +31,9 @@ buildscript {
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.room)
+    alias(libs.plugins.ksp)
 }
 
 apply plugin: 'application'
@@ -98,6 +101,15 @@ compileKotlin {
     }
 }
 
+room {
+    schemaDirectory("$projectDir/schemas")
+    generateKotlin = true
+}
+
+ksp {
+//    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "ch.qos.logback:logback-classic:$logback_version"
@@ -119,6 +131,10 @@ dependencies {
     // Mongo
     implementation "org.litote.kmongo:kmongo:$kmongo_version"
     implementation "org.litote.kmongo:kmongo-coroutine:$kmongo_version"
+
+    implementation(libs.androidx.room.runtime.jvm)
+    ksp(libs.androidx.room.compiler)
+    implementation(libs.sqlite.bundled)
 
     // Coroutines
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
@@ -274,10 +290,10 @@ def createStartAppScript() {
             /usr/bin/java -jar /root/home/release/app-${ version.toString() }.jar
             
             # Build-time: ${
-                def sdf = new SimpleDateFormat("EEE MM-dd-yyyy HH:mm:ss")
-                sdf.setTimeZone(TimeZone.getTimeZone("UTC"))
-                sdf.format(new Date()).toString() + " UTC"
-            }
+        def sdf = new SimpleDateFormat("EEE MM-dd-yyyy HH:mm:ss")
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"))
+        sdf.format(new Date()).toString() + " UTC"
+    }
             # Application-name: ${ project.name }
             # Application-version: ${ version.toString() }
             # Last git commit id: ${ runCommand('git rev-parse HEAD', 1000) }
@@ -319,10 +335,3 @@ def String runCommand(String cmd, Long timeOut, Boolean printOutput = true) {
 
     return sout.toString()
 }
-
-
-
-
-
-
-

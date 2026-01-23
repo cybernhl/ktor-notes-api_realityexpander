@@ -1,5 +1,6 @@
 package com.realityexpander.data.collections
 
+import com.realityexpander.data.table.NoteTable
 import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.types.ObjectId
 
@@ -15,4 +16,15 @@ data class Note(
     val color: String,
     var createdAt: Long = 0,  // Milliseconds since epoch, 0 if not set
     var updatedAt: Long = 0,  // Milliseconds since epoch, 0 if not set
-)
+) {
+    fun toNoteTable(): NoteTable = NoteTable(
+        id = this.id ?: ObjectId().toString(),
+        title = this.title,
+        content = this.content,
+        date = this.date,
+        dateMillis = this.dateMillis,
+        color = this.color,
+        createdAt = this.createdAt,
+        updatedAt = this.updatedAt
+    )
+}

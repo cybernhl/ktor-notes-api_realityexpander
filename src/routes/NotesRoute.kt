@@ -1,5 +1,6 @@
 package com.realityexpander.routes
 
+import com.realityexpander.dataSource
 import com.realityexpander.data.*
 import com.realityexpander.data.collections.Note
 import com.realityexpander.data.requests.AddOwnerIdToNoteIdRequest
@@ -22,7 +23,6 @@ import io.ktor.routing.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.html.*
 import kotlinx.html.unsafe
-
 fun Route.notesRoute() {
 
     // Authenticated get request to get all notes for a user
@@ -31,7 +31,7 @@ fun Route.notesRoute() {
             get {
                 // get the email from the authenticated user object
                 val email = call.principal<UserIdPrincipal>()!!.name
-                val notes = MongoNotesDataSource.getNotesForUserByEmail(email)
+                val notes = call.dataSource.getNotesForUserByEmail(email)
 
                 call.respond(
                     OK,
@@ -65,9 +65,9 @@ fun Route.notesRoute() {
                 }
 
                 val email = call.principal<UserIdPrincipal>()!!.name
-                val userExists = MongoNotesDataSource.ifUserEmailExists(email)
+                val userExists = call.dataSource.ifUserEmailExists(email)
                 if (userExists) {
-                    val acknowledged = MongoNotesDataSource.saveNote(note)
+                    val acknowledged = call.dataSource.saveNote(note)
 
                     if (acknowledged) {
                         call.respond(
@@ -129,16 +129,16 @@ fun Route.notesRoute() {
                     return@post
                 }
 
-                val userExists = MongoNotesDataSource.ifUserEmailExists(email)
+                val userExists = call.dataSource.ifUserEmailExists(email)
                 if (userExists) {
-                    val userId = MongoNotesDataSource.getUserByEmail(email)!!.id
+                    val userId = call.dataSource.getUserByEmail(email)!!.id
 
                     // Only delete the note for this userId
-                    val acknowledged = MongoNotesDataSource.deleteNoteForUser(userId, request.id)
+                    val acknowledged = call.dataSource.deleteNoteForUser(userId, request.id)
 
                     if (acknowledged) {
                         // Check if note still exists (ie: only an owner was removed)
-                        val note = MongoNotesDataSource.getNote(request.id)
+                        val note = call.dataSource.getNote(request.id)
 
                         if (note != null) {
                             call.respond(
@@ -216,18 +216,18 @@ fun Route.notesRoute() {
                 // Show incoming request headers
                 //println("headers: ${call.request.headers.entries()}")
 
-                if (MongoNotesDataSource.ifUserIdExists(request.ownerIdToAdd)) {
+                if (call.dataSource.ifUserIdExists(request.ownerIdToAdd)) {
 
                     // Already an owner of this note?
-                    if (MongoNotesDataSource.isOwnerOfNote(request.ownerIdToAdd, request.noteId)) {
-                        val note = MongoNotesDataSource.getNote(request.noteId)!!
+                    if (call.dataSource.isOwnerOfNote(request.ownerIdToAdd, request.noteId)) {
+                        val note = call.dataSource.getNote(request.noteId)!!
 
                         call.respond(
                             OK,
                             SimpleResponseWithData<Note?>(
                                 isSuccessful = false,
                                 statusCode = OK,
-                                message = "${MongoNotesDataSource.getEmailForUserId(request.ownerIdToAdd)} is already an owner of this note",
+                                message = "${call.dataSource.getEmailForUserId(request.ownerIdToAdd)} is already an owner of this note",
                                 data = note
                             )
                         )
@@ -236,10 +236,10 @@ fun Route.notesRoute() {
                     }
 
                     val acknowledged =
-                        MongoNotesDataSource.addOwnerToNote(request.ownerIdToAdd, request.noteId)
+                        call.dataSource.addOwnerToNote(request.ownerIdToAdd, request.noteId)
 
                     if (acknowledged) {
-                        val note = MongoNotesDataSource.getNote(request.noteId)
+                        val note = call.dataSource.getNote(request.noteId)
 
                         if (note != null) {
                             call.respond(
@@ -248,7 +248,7 @@ fun Route.notesRoute() {
                                     isSuccessful = true,
                                     statusCode = OK,
                                     message = "Owner added to note, " +
-                                            "${MongoNotesDataSource.getEmailForUserId(request.ownerIdToAdd)} can now access this note",
+                                            "${call.dataSource.getEmailForUserId(request.ownerIdToAdd)} can now access this note",
                                     data = note
                                 )
                             )
@@ -298,7 +298,7 @@ fun Route.notesRoute() {
 
     get("/getOwnerIdForEmail") {
         val email = call.parameters["email"]!!
-        val user = MongoNotesDataSource.getUserByEmail(email)
+        val user = call.dataSource.getUserByEmail(email)
         if (user != null) {
             call.respond(
                 OK,
@@ -323,7 +323,7 @@ fun Route.notesRoute() {
 
     get("/getEmailForOwnerId") {
         val ownerId = call.parameters["ownerId"]!!
-        val email = MongoNotesDataSource.getEmailForUserId(ownerId)
+        val email = call.dataSource.getEmailForUserId(ownerId)
         if (email != null) {
             call.respond(
                 OK,
@@ -394,7 +394,7 @@ fun Route.notesRoute() {
             } else {
                 ""
             }
-            val allNotes = MongoNotesDataSource.getNotesForUserByEmail(email)
+            val allNotes = call.dataSource.getNotesForUserByEmail(email)
 
             call.respondHtml {
                 head {
@@ -414,7 +414,7 @@ fun Route.notesRoute() {
                             +"${note.title} (Belongs to: ${
                                 note.owners.map { ownerId ->
                                     runBlocking {
-                                        MongoNotesDataSource.getEmailForUserId(ownerId)
+                                        call.dataSource.getEmailForUserId(ownerId)
                                     }
                                 }.joinToString(", ")
                             })"
@@ -443,9 +443,9 @@ private suspend fun ApplicationCall.getNotesRequest(
     request: NotesRequest,
     isFromWeb: Boolean
 ) {
-    val userExists = MongoNotesDataSource.ifUserEmailExists(request.email)
+    val userExists = dataSource.ifUserEmailExists(request.email)
     if (userExists) {
-        val notes = MongoNotesDataSource.getNotesForUserByEmail(request.email)
+        val notes = dataSource.getNotesForUserByEmail(request.email)
 
         if (notes.isNotEmpty()) {
             respondPlatform(
@@ -618,7 +618,7 @@ private suspend fun ApplicationCall.renderNotesListHTML(response: SimpleResponse
                     <span class="italic">owner: </span>
                     <code>${
                             note.owners.map { id ->
-                                MongoNotesDataSource.getEmailForUserId(id) ?: "User not found"
+                                dataSource.getEmailForUserId(id) ?: "User not found"
                             }.joinToString(", ")
                         }
                     </code>

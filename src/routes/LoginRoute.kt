@@ -3,6 +3,7 @@ package com.realityexpander.routes
 import com.realityexpander.data.MongoNotesDataSource
 import com.realityexpander.data.requests.AccountRequest
 import com.realityexpander.data.responses.SimpleResponse
+import com.realityexpander.dataSource
 import io.ktor.application.*
 import io.ktor.html.*
 import io.ktor.http.*
@@ -49,9 +50,9 @@ fun Route.loginRoute() {
             return@post
         }
 
-        val userExists =  MongoNotesDataSource.ifUserEmailExists(request.email)
+        val userExists = call.dataSource.ifUserEmailExists(request.email)
         if (userExists) {
-            if ( MongoNotesDataSource.checkPasswordForEmail(request.email, request.password)) {
+            if ( call.dataSource.checkPasswordForEmail(request.email, request.password)) {
                 call.respondPlatform(
                     isFromWeb,
                     SimpleResponse(
