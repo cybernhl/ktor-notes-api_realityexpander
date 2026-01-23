@@ -9,6 +9,7 @@ buildscript {
         kotlin_version = libs.versions.kotlin.get()
         coroutines_version = libs.versions.kotlinx.coroutines.get()
         logback_version = libs.versions.logback.get()
+        ktor_version = libs.versions.ktor.get()
         println "Show  kotlin_version  : ${kotlin_version}"
     }
     repositories {
@@ -28,15 +29,13 @@ buildscript {
     }
 }
 
-
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.room)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.ktor)
 }
-
-apply plugin: 'application'
 
 group 'com.realityexpander'
 version '0.1.6'
@@ -101,6 +100,12 @@ compileKotlin {
     }
 }
 
+ktor {
+    fatJar {
+        archiveFileName.set("app.jar")
+    }
+}
+
 room {
     schemaDirectory("$projectDir/schemas")
     generateKotlin = true
@@ -116,20 +121,22 @@ dependencies {
 
     implementation "io.ktor:ktor-server-core-jvm:$ktor_version"
     implementation "io.ktor:ktor-server-netty-jvm:$ktor_version"
+
+    // 插件
+    implementation "io.ktor:ktor-server-auth-jvm:$ktor_version"
+    implementation "io.ktor:ktor-server-content-negotiation-jvm:$ktor_version"
+    implementation "io.ktor:ktor-serialization-gson-jvm:$ktor_version" // for GSON
+    implementation "io.ktor:ktor-server-auth-jvm:$ktor_version"
+    implementation "io.ktor:ktor-server-call-logging-jvm:$ktor_version"
+    implementation "io.ktor:ktor-server-default-headers-jvm:$ktor_version"
+    implementation "io.ktor:ktor-server-html-builder-jvm:$ktor_version"
+
+    // 測試
     testImplementation "io.ktor:ktor-server-tests-jvm:$ktor_version"
 
     // HTML and CSS support
-    implementation "io.ktor:ktor-server-html-builder-jvm:$ktor_version"
     //implementation "org.jetbrains:kotlin-css-jvm:1.0.0-pre.31-kotlin-1.2.41"
     implementation "org.jetbrains.kotlin-wrappers:kotlin-css:1.0.0-pre.332-kotlin-1.6.21"
-
-    // Auth
-    implementation "io.ktor:ktor-server-auth-jvm:$ktor_version"
-    implementation "io.ktor:ktor-server-auth-jwt-jvm:$ktor_version"
-
-    // Serialization
-    implementation "io.ktor:ktor-server-content-negotiation-jvm:$ktor_version"
-    implementation "io.ktor:ktor-serialization-gson-jvm:$ktor_version"
 
     // Mongo
     implementation "org.litote.kmongo:kmongo:$kmongo_version"
@@ -144,16 +151,6 @@ dependencies {
 
     // Encryption / Security
     implementation 'commons-codec:commons-codec:1.14'
-
-
-    implementation "io.ktor:ktor-network-tls:$ktor_version"
-
-    implementation "io.ktor:ktor-server-call-logging-jvm:$ktor_version"
-
-
-    implementation "io.ktor:ktor-server-default-headers-jvm:$ktor_version"
-
-    implementation "io.ktor:ktor-server-freemarker:$ktor_version"
 }
 
 

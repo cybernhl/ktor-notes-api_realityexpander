@@ -5,7 +5,6 @@ import com.realityexpander.data.responses.SimpleResponse
 import com.realityexpander.dataSource
 
 import io.ktor.http.*
-import io.ktor.server.auth.*
 import io.ktor.server.application.*
 import io.ktor.server.html.respondHtml
 import io.ktor.server.request.ContentTransformationException

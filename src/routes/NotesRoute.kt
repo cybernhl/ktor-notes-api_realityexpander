@@ -6,15 +6,20 @@ import com.realityexpander.data.requests.AddOwnerIdToNoteIdRequest
 import com.realityexpander.data.requests.DeleteNoteRequest
 import com.realityexpander.data.responses.SimpleResponse
 import com.realityexpander.data.responses.SimpleResponseWithData
-import io.ktor.http.*
 import io.ktor.http.HttpStatusCode.Companion.BadRequest
 import io.ktor.http.HttpStatusCode.Companion.InternalServerError
+import io.ktor.server.auth.UserIdPrincipal
+import io.ktor.server.auth.authenticate
+import io.ktor.server.auth.principal
+import io.ktor.server.request.receive
+import io.ktor.server.response.respond
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.get
+import io.ktor.server.routing.post
+import io.ktor.server.routing.route
+import io.ktor.http.HttpStatusCode.*
 import io.ktor.http.HttpStatusCode.Companion.OK
-import io.ktor.server.application.*
-import io.ktor.server.auth.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
+import io.ktor.http.HttpStatusCode.Companion.Unauthorized
 
 fun Route.notesRoute() {
 
@@ -26,11 +31,7 @@ fun Route.notesRoute() {
             //highlight-end
             get {
                 // get the email from the authenticated user object
-                val principal = call.principal<UserIdPrincipal>()
-                if(principal == null) {
-                    call.respond(HttpStatusCode.Unauthorized)
-                    return@get
-                }
+                val principal = call.principal<UserIdPrincipal>()!!
                 val email = principal.name
                 val notes = call.dataSource.getNotesForUserByEmail(email)
 
@@ -55,7 +56,7 @@ fun Route.notesRoute() {
                     call.receive<Note>()
                 } catch (e: Exception) {
                     call.respond(
-                        OK,
+                         OK,
                         SimpleResponse(
                             isSuccessful = false,
                             statusCode = BadRequest,
@@ -67,7 +68,7 @@ fun Route.notesRoute() {
 
                 val principal = call.principal<UserIdPrincipal>()
                 if (principal == null) {
-                    call.respond(HttpStatusCode.Unauthorized)
+                    call.respond(Unauthorized)
                     return@post
                 }
                 val email = principal.name
@@ -117,7 +118,7 @@ fun Route.notesRoute() {
             post {
                 val principal = call.principal<UserIdPrincipal>()
                 if (principal == null) {
-                    call.respond(HttpStatusCode.Unauthorized)
+                    call.respond(Unauthorized)
                     return@post
                 }
                 val email = principal.name
@@ -197,7 +198,7 @@ fun Route.notesRoute() {
             post {
                 val principal = call.principal<UserIdPrincipal>()
                 if (principal == null) {
-                    call.respond(HttpStatusCode.Unauthorized)
+                    call.respond(Unauthorized)
                     return@post
                 }
                 // val email = principal.name // This variable is not used in this block

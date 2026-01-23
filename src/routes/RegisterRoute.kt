@@ -23,16 +23,10 @@ fun Route.registerRoute() {
     route("/register") {
         post {
             var isFromWeb = false
-
-            // Get the registration parameters
             val request = try {
-                // From web or mobile app?
                 if (call.request.contentType() == ContentType.Application.FormUrlEncoded) { // from web
                     isFromWeb = true
-                    //highlight-start
-                    // In Ktor 2.x, receiveParameters() is no longer a suspend function.
                     val formParameters = call.receiveParameters()
-                    //highlight-end
                     formParameters.let {
                         AccountRequest(it["email"] ?: "", it["password"] ?: "")
                     }
@@ -53,7 +47,6 @@ fun Route.registerRoute() {
 
             val userExists = call.dataSource.ifUserEmailExists(request.email)
             if (!userExists) {
-
                 if (request.email.isBlank() || request.password.isBlank()) {
                     call.respondPlatform(isFromWeb,
                         SimpleResponse(false, HttpStatusCode.PreconditionFailed, message = "Error: Email or password is blank")
@@ -82,8 +75,6 @@ fun Route.registerRoute() {
                 )
             }
         }
-
-        // Add a GET endpoint to serve the HTML registration form
         get {
             call.respondRegisterRawHTML()
         }

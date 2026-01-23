@@ -322,7 +322,6 @@ package com.realityexpander
 //  use admin
 //  db.system.users.deleteOne({user: "user"})
 
-
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.LoggerContext
 import com.realityexpander.data.DataSourceFactory
@@ -333,17 +332,18 @@ import com.realityexpander.routes.notesRoute
 import com.realityexpander.routes.registerRoute
 import com.realityexpander.routes.styleRoute
 import io.ktor.http.ContentType
-import io.ktor.serialization.gson.*
-import io.ktor.server.application.*
-import io.ktor.server.auth.*
-import io.ktor.server.plugins.callloging.*
-import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.server.plugins.defaultheaders.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
+import io.ktor.serialization.gson.gson
 import kotlinx.css.CssBuilder
 import org.slf4j.LoggerFactory
 import kotlin.time.ExperimentalTime
+import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.defaultheaders.DefaultHeaders
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.*
+
+lateinit var dataSource: NotesDataSource
 
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
@@ -351,7 +351,8 @@ fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 @Suppress("unused") // Referenced in application.conf
 @kotlin.jvm.JvmOverloads
 fun Application.module(testing: Boolean = false) {
-    val dataSourceTypeStr = environment.config.propertyOrNull("ktor.deployment.dataSource")?.getString()
+    val dataSourceTypeStr =
+        environment.config.propertyOrNull("ktor.deployment.dataSource")?.getString()
     val dataSourceType = try {
         DataSourceFactory.DataSourceType.valueOf(dataSourceTypeStr ?: "MONGO")
     } catch (e: IllegalArgumentException) {
@@ -360,38 +361,38 @@ fun Application.module(testing: Boolean = false) {
     }
     log.info("Using data source: $dataSourceType")
 
-    install(DataSourceFeature) {
-        dataSource = DataSourceFactory.create(dataSourceType)
+    dataSource = DataSourceFactory.create(dataSourceType)
+
+    install(DefaultHeaders) {
+        header("X-Engine", "Ktor")
     }
 
-    // Must set up authentication before setting up the Routes (or will crash)
     install(Authentication) {
         basic("auth-basic") {
-            realm = "Notes Server"
+            realm = "Ktor Notes Server"
             validate { credentials ->
-                val dataSource =  dataSource
                 val email = credentials.name
                 val password = credentials.password
                 if (dataSource.checkPasswordForEmail(email, password)) {
                     UserIdPrincipal(email)
-                } else null
+                } else {
+                    null
+                }
             }
         }
     }
 
-    install(DefaultHeaders)      // Add default headers (ie: Date of the request)
-    install(CallLogging)         // log call details
-    install(ContentNegotiation){  // serialize JSON
+    install(ContentNegotiation) {
         gson {
             setPrettyPrinting()
         }
     }
 
-    install(Routing) {           // Our routes are defined in `/routes`
-        styleRoute()
+    routing {
         registerRoute()
         loginRoute()
         notesRoute()
+        styleRoute()
     }
 
     // Configure the mongo database logging
@@ -415,15 +416,22 @@ fun Application.module(testing: Boolean = false) {
 //    }
 }
 
-var i = 0
-fun myLittleJob(){
-    println("Jello world ${++i}")
-}
-
 // Response with CSS
 suspend inline fun ApplicationCall.respondCss(builder: CssBuilder.() -> Unit) {
     respondText(CssBuilder().apply(builder).toString(), ContentType.Text.CSS)
 }
 
+data class UserIdPrincipal(val name: String) : Principal
+
+suspend fun validateCredentials(credentials: UserPasswordCredential): Principal? {
+    val email = credentials.name
+    val password = credentials.password
+    if (dataSource.checkPasswordForEmail(email, password)) {
+        return UserIdPrincipal(email)
+    }
+    return null
+}
+
+// 修改擴展屬性以直接使用全域變數
 val ApplicationCall.dataSource: NotesDataSource
-    get() = application.attributes[DataSourceFeature.key].dataSource
+    get() = com.realityexpander.dataSource
