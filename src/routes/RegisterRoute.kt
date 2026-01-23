@@ -1,6 +1,6 @@
 package com.realityexpander.routes
 
-import com.realityexpander.data.NotesDatabase
+import com.realityexpander.data.MongoNotesDataSource
 import com.realityexpander.data.collections.User
 import com.realityexpander.data.requests.AccountRequest
 import com.realityexpander.data.responses.SimpleResponse
@@ -43,7 +43,7 @@ fun Route.registerRoute() {
                 return@post
             }
 
-            val userExists =  NotesDatabase.ifUserEmailExists(request.email)
+            val userExists =  MongoNotesDataSource.ifUserEmailExists(request.email)
             if (!userExists) {
 
                 if (request.email.isBlank() || request.password.isBlank()) {
@@ -54,7 +54,7 @@ fun Route.registerRoute() {
                     return@post
                 }
 
-                if ( NotesDatabase.registerUser(
+                if ( MongoNotesDataSource.registerUser(
                         User(email = request.email, password = getHashWithSaltForPassword(request.password))
                     )
                 ) {

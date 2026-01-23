@@ -12,7 +12,7 @@ import org.litote.kmongo.coroutine.coroutine
 import org.litote.kmongo.eq
 import org.litote.kmongo.reactivestreams.KMongo
 
-object NotesDatabase : NotesDataSource {
+object MongoNotesDataSource : NotesDataSource {
     // Get Environment Variables
     val env: MutableMap<String, String> = System.getenv()
     private val mongoSettings: Map<String, String> = mapOf(
