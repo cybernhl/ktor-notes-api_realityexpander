@@ -5,12 +5,12 @@ import com.realityexpander.data.requests.AccountRequest
 import com.realityexpander.data.responses.SimpleResponse
 import com.realityexpander.dataSource
 import com.realityexpander.security.getHashWithSaltForPassword
-import io.ktor.application.*
-import io.ktor.html.*
 import io.ktor.http.*
-import io.ktor.request.*
-import io.ktor.response.*
-import io.ktor.routing.*
+import io.ktor.server.application.*
+import io.ktor.server.html.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import kotlinx.html.*
 
 fun Route.registerRoute() {
@@ -29,7 +29,10 @@ fun Route.registerRoute() {
                 // From web or mobile app?
                 if (call.request.contentType() == ContentType.Application.FormUrlEncoded) { // from web
                     isFromWeb = true
+                    //highlight-start
+                    // In Ktor 2.x, receiveParameters() is no longer a suspend function.
                     val formParameters = call.receiveParameters()
+                    //highlight-end
                     formParameters.let {
                         AccountRequest(it["email"] ?: "", it["password"] ?: "")
                     }
@@ -59,7 +62,10 @@ fun Route.registerRoute() {
                 }
 
                 if ( call.dataSource.registerUser(
-                        User(email = request.email, password = getHashWithSaltForPassword(request.password))
+                        User(
+                            email = request.email,
+                            password = getHashWithSaltForPassword(request.password)
+                        )
                     )
                 ) {
                     call.respondPlatform(isFromWeb,

@@ -1,15 +1,21 @@
 package com.realityexpander.routes
 
-import com.realityexpander.data.MongoNotesDataSource
 import com.realityexpander.data.requests.AccountRequest
 import com.realityexpander.data.responses.SimpleResponse
 import com.realityexpander.dataSource
-import io.ktor.application.*
-import io.ktor.html.*
+
 import io.ktor.http.*
-import io.ktor.request.*
-import io.ktor.response.*
-import io.ktor.routing.*
+import io.ktor.server.auth.*
+import io.ktor.server.application.*
+import io.ktor.server.html.respondHtml
+import io.ktor.server.request.ContentTransformationException
+import io.ktor.server.request.contentType
+import io.ktor.server.request.receive
+import io.ktor.server.request.receiveParameters
+import io.ktor.server.response.respond
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.get
+import io.ktor.server.routing.post
 import kotlinx.html.*
 
 fun Route.loginRoute() {

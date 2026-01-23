@@ -113,20 +113,23 @@ ksp {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "ch.qos.logback:logback-classic:$logback_version"
-    implementation "io.ktor:ktor-server-netty:$ktor_version"
-    implementation "io.ktor:ktor-server-core:$ktor_version"
-    testImplementation "io.ktor:ktor-server-tests:$ktor_version"
+
+    implementation "io.ktor:ktor-server-core-jvm:$ktor_version"
+    implementation "io.ktor:ktor-server-netty-jvm:$ktor_version"
+    testImplementation "io.ktor:ktor-server-tests-jvm:$ktor_version"
 
     // HTML and CSS support
-    implementation "io.ktor:ktor-html-builder:$ktor_version"
+    implementation "io.ktor:ktor-server-html-builder-jvm:$ktor_version"
     //implementation "org.jetbrains:kotlin-css-jvm:1.0.0-pre.31-kotlin-1.2.41"
     implementation "org.jetbrains.kotlin-wrappers:kotlin-css:1.0.0-pre.332-kotlin-1.6.21"
 
     // Auth
-    implementation "io.ktor:ktor-auth:$ktor_version"
+    implementation "io.ktor:ktor-server-auth-jvm:$ktor_version"
+    implementation "io.ktor:ktor-server-auth-jwt-jvm:$ktor_version"
 
     // Serialization
-    implementation "io.ktor:ktor-gson:$ktor_version"
+    implementation "io.ktor:ktor-server-content-negotiation-jvm:$ktor_version"
+    implementation "io.ktor:ktor-serialization-gson-jvm:$ktor_version"
 
     // Mongo
     implementation "org.litote.kmongo:kmongo:$kmongo_version"
@@ -142,10 +145,15 @@ dependencies {
     // Encryption / Security
     implementation 'commons-codec:commons-codec:1.14'
 
-    // Network
+
     implementation "io.ktor:ktor-network-tls:$ktor_version"
 
-    implementation "io.ktor:ktor-freemarker:1.6.8" //$ktor_version"
+    implementation "io.ktor:ktor-server-call-logging-jvm:$ktor_version"
+
+
+    implementation "io.ktor:ktor-server-default-headers-jvm:$ktor_version"
+
+    implementation "io.ktor:ktor-server-freemarker:$ktor_version"
 }
 
 

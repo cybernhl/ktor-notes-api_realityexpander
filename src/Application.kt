@@ -332,13 +332,15 @@ import com.realityexpander.routes.loginRoute
 import com.realityexpander.routes.notesRoute
 import com.realityexpander.routes.registerRoute
 import com.realityexpander.routes.styleRoute
-import io.ktor.application.*
-import io.ktor.auth.*
-import io.ktor.features.*
-import io.ktor.gson.*
-import io.ktor.http.*
-import io.ktor.response.*
-import io.ktor.routing.*
+import io.ktor.http.ContentType
+import io.ktor.serialization.gson.*
+import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.plugins.callloging.*
+import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.defaultheaders.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import kotlinx.css.CssBuilder
 import org.slf4j.LoggerFactory
 import kotlin.time.ExperimentalTime
@@ -358,9 +360,23 @@ fun Application.module(testing: Boolean = false) {
     }
     log.info("Using data source: $dataSourceType")
 
-    // 使用 Factory 建立實例並安裝為 Ktor Feature
     install(DataSourceFeature) {
         dataSource = DataSourceFactory.create(dataSourceType)
+    }
+
+    // Must set up authentication before setting up the Routes (or will crash)
+    install(Authentication) {
+        basic("auth-basic") {
+            realm = "Notes Server"
+            validate { credentials ->
+                val dataSource =  dataSource
+                val email = credentials.name
+                val password = credentials.password
+                if (dataSource.checkPasswordForEmail(email, password)) {
+                    UserIdPrincipal(email)
+                } else null
+            }
+        }
     }
 
     install(DefaultHeaders)      // Add default headers (ie: Date of the request)
@@ -368,24 +384,6 @@ fun Application.module(testing: Boolean = false) {
     install(ContentNegotiation){  // serialize JSON
         gson {
             setPrettyPrinting()
-        }
-    }
-
-    // Must set up authentication before setting up the Routes (or will crash)
-    install(Authentication) {
-        basic {
-            realm = "Notes Server"
-            validate { credentials ->
-                //highlight-start
-                // 從 Feature 獲取 dataSource
-                val dataSource = feature(DataSourceFeature).dataSource
-                //highlight-end
-                val email = credentials.name
-                val password = credentials.password
-                if (dataSource.checkPasswordForEmail(email, password)) {
-                    UserIdPrincipal(email)
-                } else null
-            }
         }
     }
 
@@ -428,4 +426,4 @@ suspend inline fun ApplicationCall.respondCss(builder: CssBuilder.() -> Unit) {
 }
 
 val ApplicationCall.dataSource: NotesDataSource
-    get() = application.feature(DataSourceFeature).dataSource
+    get() = application.attributes[DataSourceFeature.key].dataSource

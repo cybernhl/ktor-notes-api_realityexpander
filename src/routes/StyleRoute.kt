@@ -1,8 +1,10 @@
 package com.realityexpander.routes
 
 import com.realityexpander.respondCss
-import io.ktor.application.*
-import io.ktor.routing.*
+import io.ktor.server.application.*
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.get
+import io.ktor.server.routing.route
 import kotlinx.css.*
 
 fun Route.styleRoute() {
